@@ -112,6 +112,7 @@ From now on, every change on GitHub goes live by itself: GitHub runs the tests a
    - **Cloud Run Admin**
    - **Secret Manager Admin**
    - **Service Account User**
+   - **Project IAM Admin** (needed so the first deploy can set up permissions for the backend)
 4. Click **Continue**, then **Done**.
 
 **b) Create a key**
