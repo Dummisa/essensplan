@@ -140,7 +140,7 @@ New Google Cloud projects use the "default compute" account to build functions, 
 
 1. In your repo, go to the **Actions** tab → **Deploy** → **Run workflow** → **Run workflow**.
 2. After 5–10 minutes the run should show a green check. Click the run to see the progress.
-3. If it fails with an **Eventarc / permission** error for `onMealWrite`, wait 5 minutes, then click **Re-run jobs**. This is a known first-time hiccup.
+3. If it fails with an **Eventarc / permission** error for `mealChanged`, wait 5 minutes, then click **Re-run jobs**. This is a known first-time hiccup.
 4. If it fails with another **permission** error, the message names the missing role. Add it to `github-deploy` (step a) and re-run.
 5. Then complete step 4B.3 (the permission for the brake function).
 

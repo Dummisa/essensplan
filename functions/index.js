@@ -92,7 +92,7 @@ function signature(m) {
 }
 
 /* ---------- 1) Änderungen merken (Wartezeit 5 Minuten) ---------- */
-exports.onMealWrite = onDocumentWritten('meals/{mealId}', async (event) => {
+exports.mealChanged = onDocumentWritten('meals/{mealId}', async (event) => {
   const before = event.data.before.exists ? event.data.before.data() : null;
   const after = event.data.after.exists ? event.data.after.data() : null;
   if (!after) return;
@@ -287,7 +287,7 @@ exports.calendar = onRequest(async (req, res) => {
 });
 
 /* ---------- 4) Notbremse: Abrechnung abschalten, wenn das Budget erreicht ist ---------- */
-exports.stopBillingAtBudget = onMessagePublished('budget-alerts', async (event) => {
+exports.budgetBrake = onMessagePublished('budget-alerts', async (event) => {
   const data = event.data.message.json || {};
   logger.info('Budget-Meldung', data);
   if (typeof data.costAmount !== 'number' || typeof data.budgetAmount !== 'number') return;
