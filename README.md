@@ -17,13 +17,9 @@ A small web app to plan who cooks and who eats on which day. It is built mainly 
 
 This takes about 30–45 minutes. Follow the steps in this order.
 
-### 1. Tools on your computer
+### 1. What you need
 
-You probably already have these from the Filmabend website.
-
-- **Node.js 22.** Check with `node -v`. Install from nodejs.org if needed.
-- **Firebase CLI:** `npm install -g firebase-tools`, then `firebase login`.
-- **git** and a **GitHub** account.
+A Google account for Firebase, and the GitHub account with this repo. Everything else happens in the browser. No tools on your computer are needed, because GitHub deploys automatically (step 7).
 
 ### 2. Create the Firebase project
 
@@ -96,33 +92,50 @@ This switches billing off for the project if total costs reach 5 USD. Google's c
 
    *Alternative with a terminal (any folder):* `firebase functions:secrets:set GMAIL_APP_PASSWORD --project PROJECT-ID`
 
-### 6. Get the code onto your computer
+### 6. Fill in the configuration on GitHub
 
-The code is already on GitHub (`Dummisa/essensplan`). To deploy, you need a copy on your computer:
+On the GitHub website, edit `public/firebase-config.js` and `.firebaserc` with the values from step 2. ✅ Already done.
 
-```bash
-git clone https://github.com/Dummisa/essensplan.git
-cd essensplan
-```
+### 7. Connect GitHub to Firebase (automatic deploy)
 
-Edit `public/firebase-config.js` and `.firebaserc` (step 2), either on the GitHub website and then `git pull`, or locally and then commit and push.
+From now on, every change on GitHub goes live by itself: GitHub runs the tests and then publishes the website, database rules and backend. This needs a "deploy key" once.
 
-### 7. Deploy
+**a) Create a service account for GitHub**
 
-```bash
-cd functions
-npm install
-npm test        # should print "Alle Tests bestanden ✔"
-cd ..
-firebase deploy
-```
+1. Open <https://console.cloud.google.com/iam-admin/serviceaccounts?project=essensplan-8728b>.
+2. Click **Create service account**.
+   - **Name:** `github-deploy`, then **Create and continue**.
+3. Under *Grant this service account access to project*, add these roles one by one (**Add another role**):
+   - **Editor**
+   - **Firebase Admin**
+   - **Cloud Functions Admin**
+   - **Cloud Run Admin**
+   - **Secret Manager Admin**
+   - **Service Account User**
+4. Click **Continue**, then **Done**.
 
-- The first deploy asks to enable a few Google APIs. Answer **yes**. It can take 5–10 minutes.
-- If it asks for a **cleanup policy for container images**, answer **yes** and choose 1 day. This keeps storage free.
-- If the first deploy fails with an **Eventarc / permission** error for `onMealWrite`, wait 5 minutes and run `firebase deploy` again. This is a known first-time hiccup.
-- Then complete step 4B.3 (the permission for the brake function).
+**b) Create a key**
 
-The app is now live at **`https://PROJECT-ID.web.app`**.
+1. In the list, click `github-deploy@…`, then the **Keys** tab.
+2. Click *Add key → Create new key → JSON → Create*. A `.json` file is downloaded.
+3. If you get "Key creation is disabled", your account belongs to an organization that blocks keys. Tell Claude and we'll switch to another method.
+
+**c) Store the key on GitHub**
+
+1. In your repo, go to *Settings → Secrets and variables → Actions → New repository secret*.
+2. **Name:** `FIREBASE_SERVICE_ACCOUNT`
+3. **Secret:** open the downloaded `.json` file with a text editor and paste its **entire** content.
+4. Click **Add secret**, then **delete the downloaded file** from your computer. Anyone holding it could change your Firebase project.
+
+**d) First deploy**
+
+1. In your repo, go to the **Actions** tab → **Deploy** → **Run workflow** → **Run workflow**.
+2. After 5–10 minutes the run should show a green check. Click the run to see the progress.
+3. If it fails with an **Eventarc / permission** error for `onMealWrite`, wait 5 minutes, then click **Re-run jobs**. This is a known first-time hiccup.
+4. If it fails with another **permission** error, the message names the missing role. Add it to `github-deploy` (step a) and re-run.
+5. Then complete step 4B.3 (the permission for the brake function).
+
+The app is now live at **<https://essensplan-8728b.web.app>**.
 
 ### 8. Try it out
 
@@ -137,14 +150,21 @@ The app is now live at **`https://PROJECT-ID.web.app`**.
 
 ## Making changes later
 
-Edit files on the GitHub website, or locally and push. Changes go live only after deploying from your computer:
+Edit any file on the GitHub website and commit. A few minutes later the change is live.
+
+- Progress and errors are shown in the **Actions** tab. A red ✗ means nothing was published, and the live app stays as before.
+- If the tests fail, the deploy is skipped automatically.
+
+**Deploying from a terminal (optional)**
+
+If you ever have the project on a computer or in Google Cloud Shell, you can also deploy by hand:
 
 ```bash
-git pull          # get the latest version from GitHub
-firebase deploy   # put it online
+git clone https://github.com/Dummisa/essensplan.git && cd essensplan
+cd functions && npm install && npm test && cd ..
+npx firebase-tools login
+npx firebase-tools deploy
 ```
-
-To deploy only parts: `firebase deploy --only hosting` (website) or `firebase deploy --only functions` (backend).
 
 ## How the app behaves
 
@@ -194,9 +214,9 @@ To deploy only parts: `firebase deploy --only hosting` (website) or `firebase de
 ## Troubleshooting
 
 - **No emails arriving:**
-  - Run `firebase functions:log` and look for "E-Mail gesendet" or errors.
+  - Open <https://console.cloud.google.com/logs/query?project=essensplan-8728b> and look for "E-Mail gesendet" or errors.
   - Check the spam folder.
-  - If the app password was revoked, set a new one with `firebase functions:secrets:set GMAIL_APP_PASSWORD`, then run `firebase deploy --only functions`.
+  - If the app password was revoked, create a new one and add it as a **new version** of the secret `GMAIL_APP_PASSWORD` in the Secret Manager. Then re-run the last deploy in the Actions tab.
 - **"Noch nicht eingerichtet"** on the website: `public/firebase-config.js` still has the placeholder values.
 - **"Verbindung fehlgeschlagen":** Anonymous sign-in is not enabled (step 2.3).
 - **Calendar link gives "Nicht gefunden":** the link is outdated. Copy it again from the account menu.
