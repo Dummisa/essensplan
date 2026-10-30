@@ -85,11 +85,16 @@ This switches billing off for the project if total costs reach 5 USD. Google's c
 
 1. Log in to **hufristv@gmail.com** and enable **2-Step Verification** under <https://myaccount.google.com/security>. App passwords require it.
 2. Open <https://myaccount.google.com/apppasswords> and create an app password named `Essensplan`. Google shows a **16-character code**.
-3. In a terminal, inside this project folder, run:
-   ```bash
-   firebase functions:secrets:set GMAIL_APP_PASSWORD
-   ```
-   Paste the code when asked. Spaces don't matter. The code is stored in Google Secret Manager, never in the code or on GitHub.
+3. Store the code as a secret. This works entirely in the browser; you don't need the project files for it:
+   - Open <https://console.cloud.google.com/security/secret-manager> and select your Essensplan project at the top. If asked, click **Enable** for the Secret Manager API.
+   - Click **Create secret**.
+   - **Name:** exactly `GMAIL_APP_PASSWORD`
+   - **Secret value:** paste the 16-character code (spaces don't matter).
+   - Leave everything else as it is and click **Create secret**.
+
+   The code is stored in Google Secret Manager, never in the code or on GitHub. On the first deploy, Firebase automatically gives the functions permission to read it.
+
+   *Alternative with a terminal (any folder):* `firebase functions:secrets:set GMAIL_APP_PASSWORD --project PROJECT-ID`
 
 ### 6. Get the code onto your computer
 
