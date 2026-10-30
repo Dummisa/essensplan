@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function str(v, maxLen) { return v is string && v.size() <= maxLen; }
+
+    // Konten: alle angemeldeten Geräte dürfen lesen (Login per Name) und Konten anlegen/ändern.
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.keys().hasOnly(['name', 'nameLower', 'email', 'emailLower', 'remCook', 'remEat', 'calToken', 'createdAt'])
+        && str(request.resource.data.name, 40) && request.resource.data.name.size() > 0
+        && str(request.resource.data.nameLower, 40)
+        && str(request.resource.data.email, 100)
+        && str(request.resource.data.emailLower, 100)
+        && request.resource.data.remCook is bool
+        && request.resource.data.remEat is bool
+        && str(request.resource.data.calToken, 64) && request.resource.data.calToken.size() >= 16;
+      allow delete: if false;
+    }
+
+    // Mahlzeiten
+    match /meals/{mealId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && mealId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}_[LD]$')
+        && request.resource.data.keys().hasOnly(['date', 'type', 'week', 'time', 'menu', 'cooks', 'eaters', 'participants', 'added', 'hidden', 'updatedAt'])
+        && request.resource.data.time is string && request.resource.data.time.matches('^[0-2][0-9]:[0-5][0-9]$')
+        && str(request.resource.data.menu, 100)
+        && request.resource.data.cooks is list && request.resource.data.cooks.size() <= 20
+        && request.resource.data.eaters is list && request.resource.data.eaters.size() <= 60
+        && request.resource.data.participants is list && request.resource.data.participants.size() <= 80;
+      allow delete: if false;
+    }
+
+    // Alles andere (Warteschlange, Zähler) nur für das Backend
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

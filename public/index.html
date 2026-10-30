@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F6F4EF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Essensplan">
+  <title>Essensplan</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="top-row">
+        <h1 class="brand">Essensplan</h1>
+        <button type="button" id="login-btn" class="login-btn" data-action="open-menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <span id="login-label">Anmelden</span>
+        </button>
+      </div>
+      <nav class="week-nav" aria-label="Woche wählen">
+        <button type="button" class="round-btn" data-action="prev-week" aria-label="Vorherige Woche">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="week-label">
+          <div id="week-title" class="week-title">&nbsp;</div>
+          <div id="week-range" class="week-range">&nbsp;</div>
+        </div>
+        <button type="button" class="round-btn" data-action="next-week" aria-label="Nächste Woche">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </nav>
+      <button type="button" id="today-btn" class="today-btn" data-action="this-week" hidden>Zurück zu dieser Woche</button>
+    </header>
+
+    <main id="list" class="list" aria-live="polite">
+      <p class="loading">Lädt …</p>
+    </main>
+  </div>
+
+  <div id="dialog-root"></div>
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

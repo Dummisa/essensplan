@@ -1,0 +1,200 @@
+# Essensplan
+
+A small web app to plan who cooks and who eats on which day. It is built mainly for phones and also works on desktop.
+
+- **Website:** `public/` (plain HTML/CSS/JS, hosted on Firebase Hosting)
+- **Database:** Firestore (rules in `firestore.rules`)
+- **Backend:** `functions/` (Cloud Functions)
+  - warning emails, 5 minutes delayed and batched
+  - reminder emails, 2 hours before for cooks and 1 hour before for eaters
+  - the calendar subscription feed
+  - an automatic cost brake
+- **Emails:** sent through the Gmail account `hufristv@gmail.com`
+
+---
+
+## One-time setup
+
+This takes about 30–45 minutes. Follow the steps in this order.
+
+### 1. Tools on your computer
+
+You probably already have these from the Filmabend website.
+
+- **Node.js 22.** Check with `node -v`. Install from nodejs.org if needed.
+- **Firebase CLI:** `npm install -g firebase-tools`, then `firebase login`.
+- **git** and a **GitHub** account.
+
+### 2. Create the Firebase project
+
+1. Go to <https://console.firebase.google.com> and create a new project, e.g. `essensplan`. Google Analytics is not needed.
+   - Note the **project ID** that is shown, e.g. `essensplan-1a2b3`.
+2. **Firestore:** go to *Build → Firestore Database → Create database*.
+   - Choose **Production mode**.
+   - Choose location **`europe-west6` (Zürich)**.
+   - ⚠️ The location cannot be changed later, and the code expects Zürich. If you choose a different location, change `REGION` in `functions/index.js` and the `region` value in `firebase.json` to match.
+3. **Authentication:** go to *Build → Authentication → Get started → Sign-in method*.
+   - Enable **Anonymous**.
+   - This is only used so that each device gets a technical ID. People still "log in" with just their name.
+4. **Web app:** go to *Project settings (gear icon) → General → Your apps* and click the **</>** (web) icon.
+   - Register the app. Firebase Hosting setup is not needed here.
+   - Copy the values of the `firebaseConfig` object into **`public/firebase-config.js`**.
+5. Put your project ID into **`.firebaserc`**, replacing `DEIN-PROJEKT`.
+
+### 3. Switch to the Blaze plan
+
+Emails, the timer and the calendar feed need Cloud Functions, and those only run on the **Blaze** (pay-as-you-go) plan.
+
+In the Firebase console, click **Upgrade** at the bottom left and add a billing account with a credit card. At this usage it stays within the free allowances, so it is expected to cost **0**. Step 4 makes sure it can never cost more than a few dollars.
+
+### 4. Cost limits (please do not skip)
+
+There are three layers of protection. Layer C is already built into the code.
+
+**A – Spend cap for Cloud Functions (pauses, nothing is lost)**
+
+1. In the Firebase console, go to *Project overview → Usage and billing → Details & settings → Budgets & alerts*. The menu may be named slightly differently.
+2. Create a budget of type **spend cap** for **Cloud Functions** with an amount of **3 USD**.
+3. When it is reached, the functions pause until the end of the month. The website itself keeps working; only emails and the calendar feed stop.
+
+**B – Emergency brake for the whole project (hard limit)**
+
+This switches billing off for the project if total costs reach 5 USD. Google's cost data arrives with a delay of a few hours, so the 5 USD leaves a buffer to stay safely below 10 USD.
+
+> ⚠️ **Trade-off:** If the brake ever triggers, *everything* stops: the website, the database and emails. Google warns that resources *may* be deleted when billing is removed. With the limits in layer C this should never happen. It is purely a safety net against a technical mistake. If you would rather risk a few dollars than any data, skip layer B and keep only A + C + the email alert.
+
+1. Enable the **Cloud Billing API** for your project: <https://console.cloud.google.com/apis/library/cloudbilling.googleapis.com>. Select your project at the top first.
+2. Go to <https://console.cloud.google.com/billing>, choose your billing account, then *Budgets & alerts → Create budget*.
+   - **Scope:** only your Essensplan project, all services.
+   - **Amount:** specified amount, **5** (in the currency of your billing account).
+   - **Thresholds:** 50 %, 90 %, 100 %. You also get emails at each threshold.
+   - Under *Manage notifications*, tick **"Connect a Pub/Sub topic to this budget"**. Choose your project and **create a topic** named exactly **`budget-alerts`**.
+3. *After the first deploy* (step 7), the brake function needs permission to switch billing off:
+   - In the billing console, go to *Account management → Add principal*.
+   - **Principal:** `PROJECTNUMBER-compute@developer.gserviceaccount.com`. You find the project number in the Firebase project settings.
+   - **Role:** **Billing Account Administrator**.
+
+**C – Built into the code**
+
+- Only one function instance can run at a time.
+- At most 80 emails per day.
+- The website only ever loads one week at a time.
+- The database rules limit the size of every entry.
+
+### 5. Gmail app password
+
+1. Log in to **hufristv@gmail.com** and enable **2-Step Verification** under <https://myaccount.google.com/security>. App passwords require it.
+2. Open <https://myaccount.google.com/apppasswords> and create an app password named `Essensplan`. Google shows a **16-character code**.
+3. In a terminal, inside this project folder, run:
+   ```bash
+   firebase functions:secrets:set GMAIL_APP_PASSWORD
+   ```
+   Paste the code when asked. Spaces don't matter. The code is stored in Google Secret Manager, never in the code or on GitHub.
+
+### 6. Put the code on GitHub
+
+Create a new **private** repository on GitHub, e.g. `essensplan`, without a README. Then, in this folder, run:
+
+```bash
+git init
+git add .
+git commit -m "Essensplan"
+git branch -M main
+git remote add origin https://github.com/DEIN-NAME/essensplan.git
+git push -u origin main
+```
+
+`public/firebase-config.js` contains no secrets. Firebase web config values are meant to be public, so it is fine on GitHub.
+
+### 7. Deploy
+
+```bash
+cd functions
+npm install
+npm test        # should print "Alle Tests bestanden ✔"
+cd ..
+firebase deploy
+```
+
+- The first deploy asks to enable a few Google APIs. Answer **yes**. It can take 5–10 minutes.
+- If it asks for a **cleanup policy for container images**, answer **yes** and choose 1 day. This keeps storage free.
+- If the first deploy fails with an **Eventarc / permission** error for `onMealWrite`, wait 5 minutes and run `firebase deploy` again. This is a known first-time hiccup.
+- Then complete step 4B.3 (the permission for the brake function).
+
+The app is now live at **`https://PROJECT-ID.web.app`**.
+
+### 8. Try it out
+
+1. Open the site on your phone and register with your name and email.
+2. In Safari, use *Share → Add to Home Screen*. In Chrome on Android, use *⋮ → Add to Home screen*. It then opens like an app.
+3. Tap your name at the top → *Kalender abonnieren* → *Im Kalender öffnen*.
+4. To test the warning emails, you need a second person (or a second device, or a private browser window):
+   - Cook a meal at least 5 minutes before the other person joins as an eater.
+   - About 5 minutes after the change you should get an email. Check the spam folder the first time and mark it "not spam".
+
+---
+
+## Making changes later
+
+```bash
+git add . && git commit -m "…" && git push   # save on GitHub
+firebase deploy                              # put it online
+```
+
+To deploy only parts: `firebase deploy --only hosting` (website) or `firebase deploy --only functions` (backend).
+
+## How the app behaves
+
+**Colors**
+- Yellow: nobody is signed up.
+- Green: at least one cook.
+- Red: someone eats but nobody cooks.
+
+**Buttons**
+- The cook button signs you up as cook *and* eater.
+- Pressing it again removes you only as cook.
+- The eat button only adds or removes you as eater.
+
+**Removing people**
+- You can remove yourself and the guests you added with **+**.
+- Anyone can remove people who signed up as a guest without an account.
+
+**Time and "Was gibt es?"**
+- Only the cooks can change these.
+- If a guest is cooking, everyone can change them.
+
+**Past meals**
+- These are read-only.
+- In earlier weeks (the archive), empty boxes can be deleted.
+
+**Login**
+- Name or email, no password. The device stays logged in.
+- Guests type their name once, and the device remembers it.
+
+**Warning emails**
+- These go only to registered people with an email address. They are sent 5 minutes after the *last* change, or at the latest 30 minutes after the first one, so misclicks that are undone don't cause emails.
+- **To cooks:** when eaters join or leave. This only applies if the cook had already been signed up for more than 5 minutes, so planning together doesn't trigger emails.
+- **To eaters:** when the last cook leaves.
+
+**Reminders**
+- These are optional and off by default, and can be turned on in the account menu.
+- Cooks get one 2 hours before the meal, eaters 1 hour before.
+- Someone who is both cook and eater only gets the cook reminder.
+
+**Calendar**
+- Each person has a private link that shows the meals where they cook or eat.
+- Apple Calendar refreshes within about 15 minutes to an hour.
+- Google Calendar only refreshes every few hours, and this can't be changed.
+
+**Privacy note:** Anyone who opens the website can see the names, and technically also the email addresses and calendar links, of everyone registered. That is the trade-off for logging in without passwords, which is fine for a small, trusted group. Don't share the website address publicly.
+
+## Troubleshooting
+
+- **No emails arriving:**
+  - Run `firebase functions:log` and look for "E-Mail gesendet" or errors.
+  - Check the spam folder.
+  - If the app password was revoked, set a new one with `firebase functions:secrets:set GMAIL_APP_PASSWORD`, then run `firebase deploy --only functions`.
+- **"Noch nicht eingerichtet"** on the website: `public/firebase-config.js` still has the placeholder values.
+- **"Verbindung fehlgeschlagen":** Anonymous sign-in is not enabled (step 2.3).
+- **Calendar link gives "Nicht gefunden":** the link is outdated. Copy it again from the account menu.
+- **The website stopped working completely:** check whether the emergency brake (4B) triggered. You received budget emails, and billing is off in the console. Re-enable billing for the project in the Google Cloud console, then investigate the logs.
