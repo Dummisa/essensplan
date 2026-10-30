@@ -115,6 +115,14 @@ From now on, every change on GitHub goes live by itself: GitHub runs the tests a
    - **Project IAM Admin** (needed so the first deploy can set up permissions for the backend)
 4. Click **Continue**, then **Done**.
 
+**a2) Allow Google to build the backend**
+
+New Google Cloud projects use the "default compute" account to build functions, and it sometimes lacks the needed role.
+
+1. Open <https://console.cloud.google.com/iam-admin/iam?project=essensplan-8728b>.
+2. Find the line with `340794076814-compute@developer.gserviceaccount.com` and click the **pencil icon**. If it's not listed, tick *Include Google-provided role grants* at the top right.
+3. Add the roles **Cloud Build Service Account**, **Logs Writer** and **Artifact Registry Writer**, then click **Save**.
+
 **b) Create a key**
 
 1. In the list, click `github-deploy@…`, then the **Keys** tab.

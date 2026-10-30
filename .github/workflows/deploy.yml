@@ -52,11 +52,38 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-      - name: Veröffentlichen
+      - name: Datenbank-Regeln veröffentlichen
         if: steps.check.outputs.ready == 'true'
         run: |
           set -o pipefail
-          npx -y firebase-tools@15 deploy --non-interactive --force 2>&1 | tee step.log
+          npx -y firebase-tools@15 deploy --only firestore --non-interactive --force 2>&1 | tee step.log
+
+      # Beim ersten Mal braucht Google ein paar Minuten für interne Berechtigungen → bei Fehler einmal wiederholen
+      - name: Backend veröffentlichen
+        id: functions
+        if: steps.check.outputs.ready == 'true'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          if ! npx -y firebase-tools@15 deploy --only functions --non-interactive --force 2>&1 | tee step.log; then
+            echo "Erster Versuch fehlgeschlagen – neuer Versuch in 2 Minuten …"
+            sleep 120
+            npx -y firebase-tools@15 deploy --only functions --non-interactive --force 2>&1 | tee step.log
+          fi
+
+      - name: Website veröffentlichen
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          set -o pipefail
+          cp step.log functions.log 2>/dev/null || true
+          npx -y firebase-tools@15 deploy --only hosting --non-interactive --force 2>&1 | tee step.log
+
+      - name: Backend-Fehler melden
+        if: steps.check.outputs.ready == 'true' && steps.functions.outcome == 'failure'
+        run: |
+          cp functions.log step.log
+          echo "::error::Website ist online, aber das Backend (E-Mails, Kalender) konnte nicht veröffentlicht werden."
+          exit 1
 
       # Bei einem Fehler die wichtigsten Zeilen als Meldung anzeigen (oben in der Zusammenfassung sichtbar)
       - name: Fehler zusammenfassen
