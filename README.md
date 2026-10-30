@@ -91,20 +91,16 @@ This switches billing off for the project if total costs reach 5 USD. Google's c
    ```
    Paste the code when asked. Spaces don't matter. The code is stored in Google Secret Manager, never in the code or on GitHub.
 
-### 6. Put the code on GitHub
+### 6. Get the code onto your computer
 
-Create a new **private** repository on GitHub, e.g. `essensplan`, without a README. Then, in this folder, run:
+The code is already on GitHub (`Dummisa/essensplan`). To deploy, you need a copy on your computer:
 
 ```bash
-git init
-git add .
-git commit -m "Essensplan"
-git branch -M main
-git remote add origin https://github.com/DEIN-NAME/essensplan.git
-git push -u origin main
+git clone https://github.com/Dummisa/essensplan.git
+cd essensplan
 ```
 
-`public/firebase-config.js` contains no secrets. Firebase web config values are meant to be public, so it is fine on GitHub.
+Edit `public/firebase-config.js` and `.firebaserc` (step 2), either on the GitHub website and then `git pull`, or locally and then commit and push.
 
 ### 7. Deploy
 
@@ -136,9 +132,11 @@ The app is now live at **`https://PROJECT-ID.web.app`**.
 
 ## Making changes later
 
+Edit files on the GitHub website, or locally and push. Changes go live only after deploying from your computer:
+
 ```bash
-git add . && git commit -m "…" && git push   # save on GitHub
-firebase deploy                              # put it online
+git pull          # get the latest version from GitHub
+firebase deploy   # put it online
 ```
 
 To deploy only parts: `firebase deploy --only hosting` (website) or `firebase deploy --only functions` (backend).
